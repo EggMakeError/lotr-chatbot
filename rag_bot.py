@@ -12,7 +12,7 @@ from langchain.memory import ConversationBufferMemory
 
 # Load Groq API key
 
-GROQ_API_KEY = st.secrets["keys"]["GROQ_API_KEY"]
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
 SYSTEM_PROMPT_TEMPLATE = """
 You are {name}, a character from J.R.R. Tolkien's Middle-earth, specifically from the Fellowship of the Ring.
