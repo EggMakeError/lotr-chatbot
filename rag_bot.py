@@ -1,17 +1,14 @@
-import os
 import re
 import streamlit as st
-from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders import PyPDFLoader
-from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-
-# Load Groq API key
+from langchain.schema import Document
+from typing import List
 
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
@@ -53,7 +50,7 @@ Your identity:
 {name} - {description}
 """
 
-def load_documents(pdf_paths):
+def load_documents(pdf_paths: List[str]) -> List[Document]:
     docs = []
     for path in pdf_paths:
         loader = PyPDFLoader(path)
@@ -123,12 +120,20 @@ def extract_characters(documents):
     characters_dict = {char["name"]: char for char in characters_list}
     return characters_dict
 
-def create_vector_store(docs):
-    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = splitter.split_documents(docs)
-    embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    vectordb = Chroma.from_documents(texts, embedding)
-    return vectordb
+def simple_retriever(documents: List[Document], query: str) -> List[Document]:
+    """
+    Very basic retriever: returns docs that contain any word from query.
+    """
+    query_words = set(query.lower().split())
+    relevant_docs = []
+    for doc in documents:
+        doc_text_lower = doc.page_content.lower()
+        if any(word in doc_text_lower for word in query_words):
+            relevant_docs.append(doc)
+    # fallback: if none found, return all docs
+    if not relevant_docs:
+        relevant_docs = documents
+    return relevant_docs
 
 def create_character_chain_with_memory(character_name, all_docs, characters):
     llm = ChatGroq(api_key=GROQ_API_KEY, model_name="llama3-70b-8192")
@@ -138,14 +143,14 @@ def create_character_chain_with_memory(character_name, all_docs, characters):
     if not relevant_docs:
         relevant_docs = all_docs
 
-    # Create vector store and retriever
-    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = splitter.split_documents(relevant_docs)
-    embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    vectordb = Chroma.from_documents(texts, embedding)
-    retriever = vectordb.as_retriever()
+    # Use simple retriever logic here (just keep all for chain - we'll do retrieval in run)
+    # We do a dummy retriever to comply with ConversationalRetrievalChain interface
+    class DummyRetriever:
+        def get_relevant_documents(self, query):
+            return simple_retriever(relevant_docs, query)
 
-    # Get character identity for prompt
+    retriever = DummyRetriever()
+
     character_data = characters.get(character_name, {"name": character_name, "context": ""})
     prompt = PromptTemplate(
         input_variables=["context", "question", "chat_history"],
@@ -165,6 +170,8 @@ def create_character_chain_with_memory(character_name, all_docs, characters):
         return_source_documents=False,
         verbose=False
     )
+
+    return qa_chain
 
     return qa_chain
 
