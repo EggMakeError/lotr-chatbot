@@ -7,7 +7,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-from langchain.schema import Document
+from langchain.schema import Document, BaseRetriever
 from typing import List
 
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
@@ -143,9 +143,8 @@ def create_character_chain_with_memory(character_name, all_docs, characters):
     if not relevant_docs:
         relevant_docs = all_docs
 
-    # Use simple retriever logic here (just keep all for chain - we'll do retrieval in run)
-    # We do a dummy retriever to comply with ConversationalRetrievalChain interface
-    class DummyRetriever:
+    # DummyRetriever must inherit from BaseRetriever
+    class DummyRetriever(BaseRetriever):
         def get_relevant_documents(self, query):
             return simple_retriever(relevant_docs, query)
 
@@ -172,7 +171,3 @@ def create_character_chain_with_memory(character_name, all_docs, characters):
     )
 
     return qa_chain
-
-    return qa_chain
-
-# .\cloudflared.exe tunnel --url http://localhost:8501 to run the app with Cloudflare Tunnel
