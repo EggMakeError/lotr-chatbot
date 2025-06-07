@@ -9,4 +9,4 @@ python-dotenv
 sentence-transformers
 streamlit
 tiktoken
-
+pypdf
