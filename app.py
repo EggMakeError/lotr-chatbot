@@ -1,3 +1,10 @@
+# Swap sqlite3 with pysqlite3 before any other imports
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
+
+
 import streamlit as st
 import random
 import re
