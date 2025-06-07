@@ -10,4 +10,3 @@ sentence-transformers
 streamlit
 tiktoken
 pypdf
-pysqlite3
