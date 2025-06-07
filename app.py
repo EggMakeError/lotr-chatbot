@@ -1,10 +1,3 @@
-# Swap sqlite3 with pysqlite3 before any other imports
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
-
-
 import streamlit as st
 import random
 import re
@@ -14,7 +7,6 @@ from rag_bot import (
     create_character_chain_with_memory
 )
 
-# --- Middle-earth Themed Styling and Background ---
 def set_background_and_style():
     st.markdown(
         """
@@ -64,7 +56,6 @@ st.set_page_config(page_title="Fellowship of the Ring RAG Chatbot", layout="wide
 st.title("🧙 Welcome to a World of Wonder: Conversations in Middle-earth")
 set_background_and_style()
 
-# Load documents and character profiles
 if "docs_loaded" not in st.session_state:
     with st.spinner("Gathering tales from Middle-earth..."):
         documents = load_documents(["lotr-characters.pdf"])
@@ -75,10 +66,8 @@ if "docs_loaded" not in st.session_state:
 fellowship_names = list(st.session_state.characters.keys())
 
 if "current_character" not in st.session_state:
-    selected_character = random.choice(fellowship_names)
-    st.session_state.current_character = selected_character
+    st.session_state.current_character = random.choice(fellowship_names)
 
-# Initialize QA chain if missing
 if "qa_chain" not in st.session_state or st.session_state.qa_chain is None:
     try:
         st.session_state.qa_chain = create_character_chain_with_memory(
@@ -89,7 +78,6 @@ if "qa_chain" not in st.session_state or st.session_state.qa_chain is None:
     except Exception as e:
         st.error(f"Error initializing character chain: {e}")
 
-# Message history per character
 if "messages" not in st.session_state:
     st.session_state.messages = {}
 
@@ -100,18 +88,10 @@ if st.session_state.current_character not in st.session_state.messages:
         "content": f"You find yourself before **{st.session_state.current_character}**.\n\n> {greeting}"
     }]
 
-# Render message history
 for message in st.session_state.messages.get(st.session_state.current_character, []):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Debug info (optional, remove or comment out when stable)
-st.write("Current character:", st.session_state.get("current_character"))
-st.write("QA chain initialized:", "qa_chain" in st.session_state and st.session_state.qa_chain is not None)
-st.write("Docs loaded:", "all_docs" in st.session_state)
-st.write("Characters loaded:", "characters" in st.session_state)
-
-# Helper functions
 def detect_identity_claim(text):
     for name in fellowship_names:
         if re.search(rf"\b(I am|I'm|call me|my name is)\s+{name}\b", text, re.IGNORECASE):
@@ -137,7 +117,6 @@ def detect_past_conversation_with_character(text):
             return name
     return None
 
-# Chat input
 query = st.chat_input("Ask your question in the tongue of Middle-earth...")
 
 if query:
@@ -171,7 +150,6 @@ if query:
                 "content": f"You find yourself before **{new_char}**.\n\n> {greeting}"
             }]
         else:
-            # Clean out old switch lines
             st.session_state.messages[new_char] = [
                 m for m in st.session_state.messages[new_char]
                 if not m["content"].startswith("You are now speaking to")
