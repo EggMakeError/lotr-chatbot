@@ -70,11 +70,17 @@ fellowship_names = list(st.session_state.characters.keys())
 if "current_character" not in st.session_state:
     selected_character = random.choice(fellowship_names)
     st.session_state.current_character = selected_character
-    st.session_state.qa_chain = create_character_chain_with_memory(
-        selected_character,
-        st.session_state.all_docs,
-        st.session_state.characters
-    )
+
+# Initialize QA chain if missing
+if "qa_chain" not in st.session_state or st.session_state.qa_chain is None:
+    try:
+        st.session_state.qa_chain = create_character_chain_with_memory(
+            st.session_state.current_character,
+            st.session_state.all_docs,
+            st.session_state.characters
+        )
+    except Exception as e:
+        st.error(f"Error initializing character chain: {e}")
 
 # Message history per character
 if "messages" not in st.session_state:
@@ -91,6 +97,12 @@ if st.session_state.current_character not in st.session_state.messages:
 for message in st.session_state.messages.get(st.session_state.current_character, []):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+
+# Debug info (optional, remove or comment out when stable)
+st.write("Current character:", st.session_state.get("current_character"))
+st.write("QA chain initialized:", "qa_chain" in st.session_state and st.session_state.qa_chain is not None)
+st.write("Docs loaded:", "all_docs" in st.session_state)
+st.write("Characters loaded:", "characters" in st.session_state)
 
 # Helper functions
 def detect_identity_claim(text):
@@ -135,11 +147,15 @@ if query:
 
     if new_char and new_char != st.session_state.current_character:
         st.session_state.current_character = new_char
-        st.session_state.qa_chain = create_character_chain_with_memory(
-            new_char,
-            st.session_state.all_docs,
-            st.session_state.characters
-        )
+        try:
+            st.session_state.qa_chain = create_character_chain_with_memory(
+                new_char,
+                st.session_state.all_docs,
+                st.session_state.characters
+            )
+        except Exception as e:
+            st.error(f"Error switching character chain: {e}")
+            st.session_state.qa_chain = None
 
         if new_char not in st.session_state.messages:
             greeting = st.session_state.characters[new_char]["greeting"]
@@ -173,8 +189,11 @@ if query:
             if past_char and past_char != st.session_state.current_character:
                 response = f"I don't know what you talked about with {past_char}."
             else:
-                with st.spinner(f"{st.session_state.current_character} is pondering..."):
-                    response = st.session_state.qa_chain.run({"question": query})
+                if st.session_state.get("qa_chain") is None:
+                    response = "The character chain is still loading or not initialized."
+                else:
+                    with st.spinner(f"{st.session_state.current_character} is pondering..."):
+                        response = st.session_state.qa_chain.run({"question": query})
 
         if response:
             with st.chat_message("assistant"):
